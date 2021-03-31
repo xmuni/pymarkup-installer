@@ -1,0 +1,45 @@
+from PySide2 import QtPrintSupport
+from PySide2 import QtCore, QtGui, QtWidgets
+from PySide2.QtCore import QUrl
+from PySide2.QtWebEngineWidgets import QWebEngineView
+from shiboken2 import *
+
+import sys
+import os
+
+
+
+class MainWindow(QtWidgets.QMainWindow):
+
+    def __init__(self):
+        super(MainWindow, self).__init__()
+        self.setWindowTitle('PS2 Web viewer')
+
+        self.webEngineView = QWebEngineView()
+        self.setCentralWidget(self.webEngineView)
+        #initialUrl = "https://www.google.com"
+
+        #self.webEngineView.load(QUrl(initialUrl))
+        #self.webEngineView.load(initialUrl)
+
+        html = '''
+        <html><head></head>
+        <body><h3>H3 title</h3><p>Paragraph</p></body>
+        </html>'''
+        self.SetHTML(html)
+
+
+    def SetHTML(self,html):
+        here = os.path.dirname(os.path.abspath(__file__)).replace('\\', '/')
+        base_path = os.path.join(os.path.dirname(here), 'dummy').replace('\\', '/')
+        self.url = QtCore.QUrl('file:///' + base_path)
+        self.webEngineView.page().setHtml(html, baseUrl=self.url)
+
+
+if __name__ == '__main__':
+    app = QtWidgets.QApplication(sys.argv)
+    window = MainWindow()
+    window.setWindowTitle('Pyside2 with Pyinstaller')
+    window.resize(250, 150)
+    window.show()
+    sys.exit(app.exec_())

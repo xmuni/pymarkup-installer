@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Old catalog</title>
+    <link rel="stylesheet" href="main.css">
+
+    <style>
+        @page {
+
+            size: a4 portrait;
+            @frame content_frame {          /* Content Frame */
+                left: 40pt; width: 512pt; top: 40pt; height: 750pt;
+            }
+            @frame footer_frame {
+                -pdf-frame-content: footer_content;
+                left: 50pt; width: 512pt; top: 800pt; height: 20pt;
+            }
+        }
+    </style>
+
+    {% if css %}
+    <style type="text/css">
+        {{ css }}
+    </style>
+    {% else %}
+        <h1>ERROR LOADING CSS</h1>
+        <hr/>
+    {% endif %}
+
+    {% if preview %}
+        <style type="text/css">
+            table img {
+                width: 80px;
+            }
+        </style>
+    {% endif %}
+
+</head>
+
+<body>
+
+    {% if not preview %}
+    <div id="footer_content">
+        {{ localized.fullname }}: 
+        _____________________________
+        {{ localized.signed }}: 
+        _____________________________
+        {{ localized.page }} <pdf:pagenumber>
+        {{ localized.of }} <pdf:pagecount>
+    </div>
+    {% endif %}
+
+    <main>
+
+    <header>
+        <table>
+
+            <tr>
+                <td class="left">
+                    <b> INDUSTRIA LATERIZI
+                    <br>VITTORIO CARRARO & C. S.A.S.</b>
+                    <br>Via Borgo Botteghe, 102
+                    <br>35028 Piove di Sacco (PD)
+                    <br>Italia
+                    <br>Tel & Fax: +39 049 9775015
+                    <br>P. IVA: 00313130288
+                    <br>Codice destinatario: W7YVJK9
+                </td>
+                <td class="right">
+                    {{ cliente | add_br_tags }}
+                </td>
+            </tr>
+
+        </table>
+    </header>
+
+    <p><b>
+        {% if lingua == 'it' %}
+            Data:
+        {% else %}
+            Date:
+        {% endif %}
+    </b> {{ data }}</p>
+
+    <p>
+        {% if render_estimate %}
+            {{ preventivo or localized.estimate }}
+        {% elif render_proforma %}
+            {{ proforma or localized.proforma }}
+        {% endif %}
+    </p>
+
+    {% for table in tables %}
+    <table id=items-sold>
+
+        <tr>
+            <th class="qty">{{ localized.qty }}<br/><small>Mq</small></th>
+            <th class="wgt">{{ localized.wgt }}<br/><small>Kg</small></th>
+            <th class="pcs">{{ localized.pcs }}<br/></th>
+            {% if table.img %}
+            <th class="img"><br/></th>
+            {% endif %}
+            <th class="description">{{ localized.desc }}<br/></th>
+            <th class="price unit" colspan="2">{{ localized.price_unit }}<br/></th>
+            <th class="subtot">{{ localized.subtot }}<br/></th>
+        </tr>
+        
+        {% for row in table.riga %}
+        
+        <tr class="{% if row.even %} even {% endif %} {% if row.error %}error{% endif %}">
+            <td class="qty" rowspan="{% if 'sub' in row %}{{ 1 + row.sub|length }}{% else %}1{% endif %}">
+                {% if row.mq %}
+                    {{ row.mq | format_number }}
+                {% else %}
+                    {{ tag_br }}
+                {% endif %}
+            </td>
+
+            <td class="wgt">
+                {% if row.kg and 'sub' not in row %}
+                    {{ row.kg | round | int }}
+                {% else %}
+                    {{ tag_br }}
+                {% endif %}
+            </td>
+            
+            <td class="pcs">
+                {{ row.pz|round|int if row.pz else tag_br }}
+            </td>
+            
+            {% if table.img %}
+            <td class="img" rowspan="{% if 'sub' in row %}{{ 1 + row.sub|length }}{% else %}1{% endif %}">
+                {% if row.imgpath %}
+                    <img src="{{ row.imgpath }}" alt="">
+                {% else %}
+                    <br/>
+                {% endif %}
+            </td>
+            {% endif %}
+
+            <td class="description">
+                {{ row.error }}
+                {{ row.desc | add_br_tags if row.desc else tag_br }}
+                {% if row.nota %}
+                    {{ tag_br }}{{ row.nota | add_br_tags }}
+                {% endif %}
+                {% if preview %}
+                    {{ row.info | format_info if row.info else pass }}
+                {% endif %}
+            </td>
+            
+            <td class="price" rowspan="{% if 'sub' in row %}{{ 1 + row.sub|length }}{% else %}1{% endif %}">
+                € {{ row.eur | format_number }}
+            </td>
+
+            <td class="unit" rowspan="{% if 'sub' in row %}{{ 1 + row.sub|length }}{% else %}1{% endif %}">/ {{ row.um }}</td>
+
+            <td class="subtot" rowspan="{% if 'sub' in row %}{{ 1 + row.sub|length }}{% else %}1{% endif %}">
+                € {{ row.tot | format_number }}
+            </td>
+
+        </tr>
+
+            {% for subrow in row.sub %}
+            <tr class="{% if row.even %} even {% endif %} {% if row.error %}error{% endif %}">
+                <td class="wgt">{{ subrow.kg|round|int if subrow.kg else tag_br }}</td>
+                <td class="pcs">{{ subrow.pz|round|int if subrow.pz else tag_br }}</td>
+                <td class="description">
+                    {{ row.error }}
+                    {{ subrow.desc | add_br_tags if subrow.desc else tag_br }}
+                </td>
+            </tr>
+            {% endfor %}
+
+        {% endfor %}
+        
+        <!-- Total (no vat) -->
+        <tr class="row-subtotal">
+            <td colspan="{% if table.img %}5{% else %}4{% endif %}"></td>
+            <td colspan="2">{{ localized.subtot }}</td>
+            <td>€ {{ table.tot | format_number }}</td>
+        </tr>
+
+        <!-- Vat only -->
+        <tr class="row-vat">
+            <td colspan="{% if table.img %}5{% else %}4{% endif %}">
+                {{ table.nota }}
+            </td>
+            <td colspan="2">{{ localized.vat }} {{ table.iva }}%</td>
+            <td>€ {{ (table.tot * table.iva / 100) | format_number }}</td>
+        </tr>
+
+        <!-- Total (with vat) -->
+        <tr class="row-total">
+            <td colspan="{% if table.img %}5{% else %}4{% endif %}" class="align-left">
+                {{ table.kg | round | int }} kg tot.
+            </td>
+            <td colspan="2">{{ localized.tot }}</td>
+            <td>€ {{ (table.tot + table.tot * table.iva / 100) | format_number }}</td>
+        </tr>
+
+    </table>
+    {% endfor %}
+
+    <section id="notes">
+        {% if render_estimate %}
+
+        {{ notes_html }}
+
+        {% if preview %}
+            <br/>
+            <br/>
+            <br/>
+        {% endif %}
+        
+        {% elif render_proforma %}
+            
+            <br/>
+            <br/>
+            <p>Dati per effettuare il pagamento:</p>
+            <p>IBAN 123ABC345DEF678GHI90</p>
+
+        {% endif %}
+    </section>
+
+    </main>
+    
+</body>
+</html>

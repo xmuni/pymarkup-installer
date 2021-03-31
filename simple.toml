@@ -1,0 +1,33 @@
+lingua = 'it'
+
+preventivo = "Preventivo per mattoni etc etc"
+
+cliente = """
+Mario Rossi
+Via Abc Roma
+Tel 0123456789
+C.F. ABC123DEF456
+"""
+
+[tab]
+iva = 10
+nota = "IVA ridotta etc etc"
+
+[[tab.riga]]
+#mq = 100
+pz = 177*6
+eur = 1
+um = 'pz'
+kg-pz = 1
+img = "default.jpg"
+desc = 'blabla'
+
+[[tab.riga]]
+mq = 30
+eur = 50
+
+---
+
+Note del preventivo
+
+$caratteristiche

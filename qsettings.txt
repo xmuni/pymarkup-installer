@@ -1,0 +1,12 @@
+
+class Window(QtGui.QWidget):
+    def __init__(self):
+        super(Window, self).__init__()
+
+        settings = QtCore.QSettings('Company', 'Appname')
+        self.somevalue = settings.value('somevalue', '')
+
+    def closeEvent(self, event):
+        settings = QtCore.QSettings('Company', 'Appname')
+        settings.setValue('somevalue', self.somevalue)
+    
