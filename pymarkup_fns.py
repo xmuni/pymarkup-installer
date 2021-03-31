@@ -3,8 +3,6 @@ import toml
 import json
 import os
 import time
-# from jinja_renderer import render_template
-#from xhtml2pdf import pisa
 from datetime import datetime
 import locale
 from markdown2 import Markdown
@@ -13,8 +11,10 @@ from simpleeval import simple_eval, NameNotDefined
 import html_css
 from jinja2 import Template, Environment, FileSystemLoader
 
+from xhtml2pdf import pisa
 
-def render_template(path_template, output=None, filters={}, **kw):
+
+def render_template(path_template, output=None, filters={}, **kwargs):
 
     # print('Jinja renderer received template path:',path_template)
 
@@ -32,17 +32,14 @@ def render_template(path_template, output=None, filters={}, **kw):
         env.filters[key] = value
 
     template = env.from_string(template_str)
-    return template.render(**kw)
+    return template.render(**kwargs)
 
 
 
-def convertHtmlToPdf(sourceHtml, outputFilename):
-    return True
-    '''
-    with open(outputFilename, "w+b") as resultFile:
+def convertHtmlToPdf(sourceHtml, savepath):
+    with open(savepath, "w+b") as resultFile:
         pisaStatus = pisa.CreatePDF(sourceHtml, dest=resultFile)
         return pisaStatus.err # return True on success and False on errors
-    '''
 
 
 def get_macros():
@@ -75,12 +72,14 @@ def parse_pz_comp(text):
 
 def read_csv(path, delimiter=','):
 
-    if path is None:
-        return {}
-
     lines = []
-    with open(path,'r+',encoding='UTF-16') as file:
-        lines = file.read().splitlines()
+
+    try:
+        with open(path,'r+',encoding='UTF-16') as file:
+            lines = file.read().splitlines()
+    except FileNotFoundError:
+        print('Error: CSV file not found:',path)
+        return {}
 
     header = lines[0].split(delimiter)
 
@@ -311,18 +310,7 @@ def get_subitems(singles):
 
 def merge(toml_model, singles, subitems, macros, images):
 
-    # row[key] = simple_eval(row[key])
-
-    # printdic(subitems,'dumps/subitems.json')
-
     logs = []
-
-    # row_defaults = {
-    #     'um': 'mq',
-    # }
-
-    # printdic(toml_model, 'dumps/toml_model.json')
-    # print('----------------')
 
     table_defaults = {
         'iva': True,
@@ -337,10 +325,6 @@ def merge(toml_model, singles, subitems, macros, images):
 
         for row in table['riga']:
 
-            # for key in ['mq','pz','kg','tot','pz-pa','pz-ca']:
-            #     if key in row:
-            #         row[key] = 
-
             # Add default values from database table
             if 'id' in row and row['id'] in singles:
                 for key,value in singles[row['id']].items():
@@ -354,42 +338,14 @@ def merge(toml_model, singles, subitems, macros, images):
             # If no unit of measure was set in toml, default to 'mq'
             row.setdefault('um','mq')
             
-            '''
-            # Add default values from database table
-            if 'id' in row and row['id'] in singles:
-                for key_toml,key_singles in key_mapping.items():
-                    if key_toml not in row: # Do not overwrite values already set in toml
-                        row_id = row['id']
-                        row[key_singles] = singles[row_id][key_singles]
-            '''
-
             if 'img' in row:
                 imgname = row['img']
                 if imgname in images:
                     # print(imgname,images[imgname])
                     row['imgpath'] = images[imgname]
-                '''
-                imgpath = os.path.join(toml_model['imgfolder'], row['img'])
-                if os.path.exists(imgpath):
-                    row['imgpath'] = imgpath
-                else:
-                    # del row['img']
-                    error_msg = '[error] image not found: '+imgpath
-                    logs.append(error_msg)
-                    print(error_msg)
-                '''
-
-            # row['info'] = [
-            #     'Pz/pallet: {}'.format(row.get('pz-pa','?')),
-            #     'Pz/cassa: {}'.format(row.get('pz-ca','?')),
-            # ]
-
+                    
             # Add sub-rows if not specified
             if 'id' in row and 'sub' not in row:
-                # row['um'] = 'mq'
-                # print(row.keys())
-                # row['tot'] = row['eur'] * row['mq']
-                # row['tot'] = 1
                 if row['id'] in subitems:
                     row['um'] = 'mq'
                     row['sub'] = []
@@ -397,10 +353,6 @@ def merge(toml_model, singles, subitems, macros, images):
                         subrow = singles[single_id]
                         subrow['pz'] = row['mq'] * pcs
                         subrow['kg'] = subrow['pz'] * subrow['kg-pz']
-                        # subrow['mq'] = 1
-                        # subrow['eur'] = 1
-                        # subrow['um'] = 'mq'
-                        # subrow['tot'] = 1
                         subrow['desc'] = subrow['desc-it'] if toml_model['lingua']=='it' else subrow['desc-en']
                         row['sub'].append(subrow)
                 
@@ -409,11 +361,6 @@ def merge(toml_model, singles, subitems, macros, images):
                     row.setdefault('error','Errore ID: '+row['id'])
                     row_id = row['id']
                     logs.append(f'{row_id} not in singles: {row_id in singles}')
-                    # print(row_id)
-                    # print(singles.keys())
-                    # print(row_id in singles)
-                # except KeyError as e:
-                #     logs.append('Key error: '+str(e))
                 
 
             row['info'] = []
@@ -489,16 +436,6 @@ def merge(toml_model, singles, subitems, macros, images):
             table['riga'][i]['even'] = (i%2 != 0)
 
 
-    # merged_model = {}
-    # for key,value in toml_model.items():
-    #     if key not in ['tab']:
-    #         merged_model[key] = value
-
-    # merged_model['tables'] = toml_model['tables']
-
-
-    # printdic(toml_model)
-
     
     # Convert markdown to html
     md = Markdown(extras=["tables"])
@@ -510,9 +447,6 @@ def merge(toml_model, singles, subitems, macros, images):
         else:
             md_text.append(line)
     toml_model['notes_html'] = md.convert('\n'.join(md_text))
-    # print('-----------')
-    # print('MD conversion ms:',time.time()-start)
-    # print('-----------')
 
 
     if len(logs) > 0:
@@ -567,5 +501,5 @@ def render_html(data, preview=True, path_html='', path_css='', **kwargs):
     html = render_template(path_html, output='rendered.html', filters=filters, preview=preview, **data, **kwargs)
     return html
 
-def render_pdf(html):
-    convertHtmlToPdf(html, 'rendered.pdf')
+def render_pdf(html,savepath):
+    convertHtmlToPdf(html,savepath)

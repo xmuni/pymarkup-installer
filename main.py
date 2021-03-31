@@ -9,7 +9,7 @@ ADD_WEBENGINE = True
 
 #import tkinter
 
-from pymarkup_fns import read_toml, merge, read_csv, render_html, load_css, get_subitems
+from pymarkup_fns import read_toml, merge, read_csv, render_html, load_css, get_subitems, render_pdf
 '''
 from pymarkup_fns import \
     read_csv, read_toml, merge, \
@@ -40,7 +40,6 @@ import sys
 import os
 import json
 
-PATH_SETTINGS = './settings.json'
 
 
 
@@ -49,8 +48,6 @@ class Browser(QWebEngineView):
     def __init__(self, mw):
         super().__init__()
 
-        # self.mw = mw
-        # self.setZoomFactor(self.mw.settings['browserzoomfactor'])
         # With QWebEnginePage.setHtml, the html is loaded immediately.
         # baseUrl is used to resolve relative URLs in the document.
         # For whatever reason, it seems like the baseUrl resolves to
@@ -60,10 +57,6 @@ class Browser(QWebEngineView):
         # directory.
         # https://doc-snapshots.qt.io/qtforpython-5.15/PySide2/QtWebEngineWidgets/QWebEnginePage.html#PySide2.QtWebEngineWidgets.PySide2.QtWebEngineWidgets.QWebEnginePage.setHtml
         
-        # html = open('rendered.html','r+',encoding='UTF-8').read()
-        # self.SetHTML(html)
-
-
     def SetHTML(self,html):
         here = os.path.dirname(os.path.abspath(__file__)).replace('\\', '/')
         base_path = os.path.join(os.path.dirname(here), 'dummy').replace('\\', '/')
@@ -106,7 +99,6 @@ class SettingsDialog(QDialog):
 
 
     def setup_layout(self):
-        # print('Setting up settings dialog UI')
 
         self.widgets = {
             'table_products':   QLineEdit(),
@@ -384,7 +376,6 @@ class MainWindow(QtWidgets.QMainWindow):
     def SaveAs(self):
 
         path,_ = QtWidgets.QFileDialog().getSaveFileName(self, "Salva file", '', "Toml (*.toml)")
-        # print(type(savepath),savepath)
         if path != '':
             try:
                 with open(path,'w+') as file:
@@ -468,8 +459,18 @@ class MainWindow(QtWidgets.QMainWindow):
 
 
     def RenderPDF(self, **kwargs):
-        render_pdf(self.RenderHTML(**kwargs))
-        os.startfile('rendered.pdf')
+
+        folder,filename = os.path.split(self.settings['paths']['lastopened'])
+        name,_ = os.path.splitext(filename)
+        defaultpath = os.path.join(folder,f'{name}.pdf')
+        print('Last opened folder/filename:',folder)
+
+        path,_ = QtWidgets.QFileDialog().getSaveFileName(self, "Salva PDF", defaultpath, "PDF (*.pdf)")
+        if path != '':
+            html = self.RenderHTML(**kwargs)
+            render_pdf(html,path)
+            self.ConsoleLog('PDF salvato: '+path)
+            # os.startfile('rendered.pdf')
 
 
     def RenderPDF_estimate(self):
@@ -515,32 +516,25 @@ class MainWindow(QtWidgets.QMainWindow):
             'zoom_console': 2,
         }
 
-        try:
-            #jsontext = open(PATH_SETTINGS,'r+',encoding='UTF-8').read()
-            qsettings = QtCore.QSettings('Company','Appname')
-            jsontext = qsettings.value('settings',None)
-            # print('Json settings from QSettings:',jsontext)
+        qsettings = QtCore.QSettings('Company','Appname')
+        jsontext = qsettings.value('settings',None)
+        # print('Json settings from QSettings:',jsontext)
 
-            settings = json.loads(jsontext) if jsontext else {}
-            for key in default_settings.keys():
-                if key in settings:
-                    default_settings[key] = settings[key]
+        settings = json.loads(jsontext) if jsontext else {}
+        for key in default_settings.keys():
+            if key in settings:
+                default_settings[key] = settings[key]
 
-            # Check all paths and delete them if they are broken
-            for key,path in default_settings['paths'].items():
-                if not os.path.exists(path):
-                    default_settings['paths'][key] = ''
-
-        except FileNotFoundError as e:
-            print('Loading defeault settings because file not found:',PATH_SETTINGS)
-            print(e)
+        # Check all paths and delete them if they are broken
+        for key,path in default_settings['paths'].items():
+            if not os.path.exists(path):
+                default_settings['paths'][key] = ''
 
         return default_settings
 
 
     def SaveSettings(self):
-        print('SaveSettings')
-        # self.ConsoleLog('Saving settings...')
+        print('Saving settings')
         
         g = self.geometry()
         self.settings['geometry'] = [g.x(), g.y() ,g.width(), g.height()]
@@ -551,15 +545,6 @@ class MainWindow(QtWidgets.QMainWindow):
 
         qsettings = QtCore.QSettings('Company','Appname')
         qsettings.setValue('settings', json.dumps(self.settings))
-
-        try:
-            jsontext = json.dumps(self.settings,indent=4)
-            with open(PATH_SETTINGS,'w+',encoding='UTF-8') as file:
-                file.write(jsontext)
-            print('Settings saved')
-            # print(jsontext)
-        except Exception as e:
-            self.ConsoleLog(str(e))
 
 
     def OpenSettingsDialog(self):

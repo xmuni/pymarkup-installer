@@ -1,7 +1,7 @@
 {
     "geometry": [
-        911,
-        403,
+        289,
+        450,
         1191,
         828
     ],
@@ -15,10 +15,10 @@
     ],
     "browserzoomfactor": 1.4500000000000002,
     "paths": {
-        "lastopened": "D:/Desktop/Dev/PyMarkup_ps2_pyinstaller/simple.toml",
-        "table_products": "D:/Desktop/Dev/PyMarkup_ps2_pyinstaller/singles.csv",
-        "template_html": "D:/Desktop/Dev/PyMarkup_ps2_pyinstaller/template.html",
-        "template_css": "D:/Desktop/Dev/PyMarkup_ps2_pyinstaller/main.css"
+        "lastopened": "D:/Desktop/Dev/PyMarkup/4_pymarkup-installer/testing/simple.toml",
+        "table_products": "",
+        "template_html": "",
+        "template_css": ""
     },
     "zoom_texteditor": 2,
     "zoom_console": 2
