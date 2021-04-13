@@ -1,9 +1,10 @@
 lingua = 'it'
 
-preventivo = "Preventivo per mattoni etc etc"
+preventivo = "Preventivo per mattoni etc etc 1234567891"
 
 cliente = """
 Mario Rossi
+Electric Boogaloo
 Via Abc Roma
 Tel 0123456789
 C.F. ABC123DEF456
@@ -15,7 +16,7 @@ nota = "IVA ridotta etc etc"
 
 [[tab.riga]]
 #mq = 100
-pz = 177*6
+pz = 390*3
 eur = 1
 um = 'pz'
 kg-pz = 1

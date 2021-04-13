@@ -7,11 +7,12 @@ from datetime import datetime
 import locale
 from markdown2 import Markdown
 from simpleeval import simple_eval, NameNotDefined
+from subprocess import call
 
 import html_css
 from jinja2 import Template, Environment, FileSystemLoader
 
-from xhtml2pdf import pisa
+#from xhtml2pdf import pisa
 
 
 def render_template(path_template, output=None, filters={}, **kwargs):
@@ -36,7 +37,24 @@ def render_template(path_template, output=None, filters={}, **kwargs):
 
 
 
+def render_pdf(path_script,htmlpath,savepath):
+    command = f'open {path_script} {htmlpath} {savepath}'
+    print('Command to be called:')
+    print(command)
+    #process = os.popen(command)
+    call(command)
+    # result = process.read()
+    # success = convertHtmlToPdf(html,savepath)
+
+
 def convertHtmlToPdf(sourceHtml, savepath):
+    print('XHTML2PDF converting html:')
+    print(savepath)
+    #print(sourceHtml)
+
+    with open('/Users/pc/Dev/pymarkup-installer/testing/pisa_rendered.html','w+') as file:
+        file.write(sourceHtml)
+
     with open(savepath, "w+b") as resultFile:
         pisaStatus = pisa.CreatePDF(sourceHtml, dest=resultFile)
         return pisaStatus.err # return True on success and False on errors
@@ -500,6 +518,3 @@ def render_html(data, preview=True, path_html='', path_css='', **kwargs):
     # print('Preview:',preview)
     html = render_template(path_html, output='rendered.html', filters=filters, preview=preview, **data, **kwargs)
     return html
-
-def render_pdf(html,savepath):
-    convertHtmlToPdf(html,savepath)

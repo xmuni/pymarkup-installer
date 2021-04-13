@@ -4,10 +4,14 @@ block_cipher = None
 
 
 a = Analysis(['main.py'],
-             pathex=['/Users/pc/Dev/ps2_pyinstaller'],
+             pathex=[],
              binaries=[],
-             datas=[('template.html', 'res'),],
-             hiddenimports=['shiboken2','PySide2.QtPrintSupport', 'reportlab'],
+             datas=[],
+             hiddenimports=[
+                 'shiboken2',
+                 'PySide2.QtPrintSupport',
+                 #'reportlab',
+             ],
              hookspath=[],
              runtime_hooks=[],
              excludes=[],

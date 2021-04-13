@@ -3,7 +3,8 @@ from PySide2 import QtCore, QtGui, QtWidgets
 from PySide2.QtWidgets import QMainWindow, QLabel, QVBoxLayout, QAction, QDialog, QSplitter, QGridLayout, QLineEdit, QPushButton, QWidget, QMessageBox
 from PySide2.QtCore import QUrl
 from PySide2.QtWebEngineWidgets import QWebEngineView
-from shiboken2 import *
+#from shiboken2 import *
+from subprocess import call, run, PIPE
 
 ADD_WEBENGINE = True
 
@@ -106,6 +107,9 @@ class SettingsDialog(QDialog):
             'img_folder':       QLineEdit(), # QPlainTextEdit()
             'template_html':    QLineEdit(),
             'template_css':     QLineEdit(),
+            'renderpdf':        QLineEdit(),
+            'sysfolder':        QLineEdit(),
+            'python':           QLineEdit(),
         }
 
         widget_labels = {
@@ -114,6 +118,9 @@ class SettingsDialog(QDialog):
             'img_folder':       "Cartella immagini",
             'template_html':    "HTML per anteprima",
             'template_css':     "CSS per anteprima",
+            'renderpdf':        "renderpdf.app",
+            'sysfolder':        "Cartella di sistema",
+            'python':           "Python3 full path",
         }
 
         widget_button_slots = {
@@ -122,13 +129,19 @@ class SettingsDialog(QDialog):
             'img_folder':       lambda: self.FolderPicker('img_folder'),
             'template_html':    lambda: self.FilePicker('template_html','*.html'),
             'template_css':     lambda: self.FilePicker('template_css','*.css'),
+            'renderpdf':        lambda: self.FilePicker('renderpdf','*.app'),
+            'sysfolder':        lambda: self.FolderPicker('sysfolder'),
+            'python':           lambda: self.FilePicker('python','*'),
         }
+
+        #editable_fields = ['python']
 
         grid_layout = QGridLayout()
 
         for i,key in enumerate(self.widgets.keys()):
             label = QLabel(widget_labels[key])
             widget = self.widgets[key]
+            #if key not in editable_fields:
             widget.setReadOnly(True)
             widget.setDisabled(True)
             button = QPushButton('Seleziona')
@@ -141,7 +154,6 @@ class SettingsDialog(QDialog):
             grid_layout.addWidget(label,i,0,1,1)
             grid_layout.addWidget(widget,i,1,1,1)
             grid_layout.addWidget(button,i,2,1,1)
-
 
         grid_widget = QWidget()
         grid_widget.setLayout(grid_layout)
@@ -189,6 +201,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.init_widgets()
         self.init_layout()
         self.init_mainmenu()
+
+        self.python_path = None
         
         try:
             self.css = load_css(self.settings['paths']['css'])
@@ -269,6 +283,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 ['Aggiorna database', 'Ctrl+L',     self.LoadResources],
                 ['Impostazioni...', 'Ctrl+I',          self.OpenSettingsDialog],
                 # ['Print pwd', 'Ctrl+P',          self.PrintPwd],
+                ['Subprocess', None, self.RunSubprocess],
                 [],
                 ['Chiudi', 'Ctrl+Shift+Q',          self.close],
             ],
@@ -316,6 +331,36 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def Dummy(self):
         return
+
+
+    def GetPythonPath(self):
+        cmd = 'which python3'
+        response = run(cmd, shell=True, stdout=PIPE, stderr=PIPE)
+        return response.stdout.decode('utf-8')
+
+
+    def RunSubprocess(self):
+
+        self.ConsoleLog(self.GetPythonPath())
+
+        return
+
+        cmd1 = '/Users/pc/Dev/pymarkup_installer_redux/local/sys_folder/xhtml2pdf.command'
+        cmd2 = 'pwd > /Users/pc/Dev/pymarkup_installer_redux/local/sys_folder/pwd.txt'
+        cmd = 'which python3'
+
+        response = run(cmd, shell=True, stdout=PIPE, stderr=PIPE)
+        #self.ConsoleLog(str(response))
+
+        log = [cmd, response.returncode, response.stdout.decode('utf-8'), response.stderr]
+        #log = [cmd, response]
+        self.ConsoleLog('\n'.join([str(x) for x in log]))
+        '''
+        process = os.popen("which python")
+        result = process.read()
+        print(result)
+        self.ConsoleLog(result)
+        '''
 
 
     def ConfirmClose(self):
@@ -462,15 +507,80 @@ class MainWindow(QtWidgets.QMainWindow):
 
         folder,filename = os.path.split(self.settings['paths']['lastopened'])
         name,_ = os.path.splitext(filename)
-        defaultpath = os.path.join(folder,f'{name}.pdf')
+        defaultpath = os.path.join(folder,name+'.pdf')
         print('Last opened folder/filename:',folder)
 
-        path,_ = QtWidgets.QFileDialog().getSaveFileName(self, "Salva PDF", defaultpath, "PDF (*.pdf)")
-        if path != '':
-            html = self.RenderHTML(**kwargs)
-            render_pdf(html,path)
-            self.ConsoleLog('PDF salvato: '+path)
-            # os.startfile('rendered.pdf')
+        savepath,_ = QtWidgets.QFileDialog().getSaveFileName(self, "Salva PDF", defaultpath, "PDF (*.pdf)")
+        if savepath == '':
+            return
+        
+        path_sys = self.settings['paths']['sysfolder']
+        html = self.RenderHTML(**kwargs)
+
+        # Save 'tmp.html'
+        htmlpath = os.path.join(path_sys,'tmp.html')
+        '''
+        # TEMPORARILY DISABLED FOR DEBUGGING
+        with open(htmlpath, 'w+', encoding='UTF-8') as file:
+            file.write(html)
+        '''
+
+        sys_folder = self.settings['paths']['sysfolder']
+        #path_script = os.path.join(self.settings['paths']['renderpdf'], 'Contents/MacOS/renderpdf')
+        path_script = os.path.join(sys_folder, 'renderpdf.py')
+        #self.ConsoleLog(html)
+
+        print('-----')
+        print('RenderPDF paths:')
+        print(path_script, os.path.exists(path_script))
+        print(htmlpath, os.path.exists(htmlpath))
+        print(savepath)
+        print('-----')
+
+        #render_pdf(path_script,htmlpath,savepath)
+        #python_path = '/Library/Frameworks/Python.framework/Versions/3.6/bin/python3'
+
+        python_path = self.settings['paths']['python']
+        command = f'{python_path} "{path_script}" --args "{savepath}"'
+        
+        #command = f'xhtml2pdf {htmlpath} {savepath}'
+
+        '''
+        cmd_lines = [
+            'from xhtml2pdf import pisa',
+            f'resultFile = open("{savepath}", "w+b")',
+            f'htmlFile = open("{htmlpath}","r+")',
+            f'pisa.CreatePDF(htmlFile.read(),dest=resultFile)',
+            'resultFile.close()',
+            'htmlFile.close()',
+        ]
+        command = "python3 -c '" + ';'.join(cmd_lines) + "'"
+        '''
+
+        #command = f'python3 "{path_script}" "{savepath}"'
+
+        # Path to renderpdf.command (as a proxy to execute renderpdf.py)
+        #command = os.path.join(sys_folder, 'xhtml2pdf.command')
+
+        print('Calling command:')
+        print(command)
+        print('-----')
+        try:
+            #result = call(command,shell=True) # shell=True is needed because subprocess.call is just a wrapper for Popen
+            result = call(command, shell=True)
+            self.ConsoleLog(command)
+            #self.ConsoleLog('Xhtml2 call result: '+str(result))
+            #self.ConsoleLog('PDF salvato: '+savepath)
+        except FileNotFoundError as e:
+            print('Subprocess.call raised an exception:')
+            print(e)
+            self.ConsoleLog(str(e))
+        except Exception as e:
+            self.ConsoleLog(str(e))
+            with open(os.path.join(sys_folder,'applog.txt'),'r+') as file:
+                file.write(str(e))
+
+        # os.startfile('rendered.pdf')
 
 
     def RenderPDF_estimate(self):
@@ -511,6 +621,7 @@ class MainWindow(QtWidgets.QMainWindow):
             'browserzoomfactor': 1,
             'paths': {
                 'lastopened': '',
+                'python': '/Library/Frameworks/Python.framework/Versions/3.6/bin/python3',
             },
             'zoom_texteditor': 2,
             'zoom_console': 2,
