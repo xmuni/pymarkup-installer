@@ -223,7 +223,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.save_html = True # Always true unless disabled in debug mode
         
         try:
-            self.css = load_css(self.GetPath('css'))
+            self.css = load_css(self.GetPath('template_css'))
         except KeyError:
             self.css = ''
 
@@ -249,28 +249,40 @@ class MainWindow(QtWidgets.QMainWindow):
     def GetPath(self,key):
 
         default_names = {
-            'css': 'main.css',
-            'html': 'template.html',
+            'template_css': 'template.css',
+            'template_html': 'template.html',
+            'singles': 'singles.csv',
+            'table_products': 'singles.csv',
+            'table_macros': 'macros.csv',
+            'img_folder': 'img',
         }
 
         try:
-            self.settings['paths']['css']
+            path = self.settings['paths'][key]
+            if os.path.exists(path):
+                # print('Returning path for {}: {}'.format(key,self.settings['paths'][key]))
+                return path
         except KeyError:
-            try:
-                return os.path.join(self.settings['paths']['sys_folder'],default_names[key])
-            except KeyError:
-                pass
+            pass
 
+        try:
+            # print('Returning default path for',key)
+            return os.path.join(self.settings['paths']['sysfolder'],default_names[key])
+        except KeyError:
+            # print('Returning none')
+            return None
+
+        # print('Returning none')
         return None
 
 
     # Load two tables and images
     def LoadResources(self):
-        self.singles = read_csv(self.settings['paths'].get('table_products',None))
+        self.singles = read_csv(self.GetPath('table_products'))
         return
         self.subitems = get_subitems(self.singles)
-        self.macros = read_csv_adv(self.settings['paths'].get('table_macros',None))
-        self.images = get_images(self.settings['paths'].get('img_folder',None))
+        self.macros = read_csv_adv(self.GetPath('table_macros'))
+        self.images = get_images(self.GetPath('img_folder'))
         self.ConsoleLog('Database aggiornato.')
 
     
@@ -364,6 +376,19 @@ class MainWindow(QtWidgets.QMainWindow):
     def PrintSettings(self):
         settings = json.dumps(self.settings,indent=4)
         self.ConsoleLog(settings)
+
+        paths = [
+            'template_css',
+            'template_html',
+            'singles',
+            'table_products',
+            'table_macros',
+            'img_folder',
+        ]
+        print('Paths:')
+        for path in paths:
+            print(self.GetPath(path))
+        print('\nSettings:')
         print(settings)
 
     def PrintPwd(self):
@@ -400,8 +425,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.ConsoleLog(self.GetPythonPath())
 
-        return
-
+        '''
         cmd1 = '/Users/pc/Dev/pymarkup_installer_redux/local/sys_folder/xhtml2pdf.command'
         cmd2 = 'pwd > /Users/pc/Dev/pymarkup_installer_redux/local/sys_folder/pwd.txt'
         cmd = 'which python3'
@@ -412,6 +436,7 @@ class MainWindow(QtWidgets.QMainWindow):
         log = [cmd, response.returncode, response.stdout.decode('utf-8'), response.stderr]
         #log = [cmd, response]
         self.ConsoleLog('\n'.join([str(x) for x in log]))
+        '''
         '''
         process = os.popen("which python")
         result = process.read()
@@ -555,8 +580,8 @@ class MainWindow(QtWidgets.QMainWindow):
         
         template_path = 'template.html'
         # print('Template path:',template_path)
-        path_html = self.settings['paths']['template_html']
-        path_css  = self.settings['paths']['template_css']
+        path_html  = self.GetPath('template_html')
+        path_css  = self.GetPath('template_css')
         return render_html(order_model, path_html=path_html, path_css=path_css, **kwargs)
 
 
