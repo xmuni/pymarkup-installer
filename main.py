@@ -265,14 +265,9 @@ class MainWindow(QtWidgets.QMainWindow):
         except KeyError:
             pass
 
-        try:
-            # print('Returning default path for',key)
-            return os.path.join(self.settings['paths']['sysfolder'],default_names[key])
-        except KeyError:
-            # print('Returning none')
-            return None
+        try: return os.path.join(self.settings['paths']['sysfolder'],default_names[key])
+        except KeyError: pass
 
-        # print('Returning none')
         return None
 
 
