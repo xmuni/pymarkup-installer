@@ -1,0 +1,10 @@
+__pycache__
+unused
+build
+dist
+Include
+include
+Lib
+lib
+Scripts
+.vscode
