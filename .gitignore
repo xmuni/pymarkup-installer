@@ -8,3 +8,5 @@ Lib
 lib
 Scripts
 .vscode
+.DS_Store
+._.DS_Store

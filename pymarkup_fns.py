@@ -98,6 +98,10 @@ def read_csv(path, delimiter=','):
     except FileNotFoundError:
         print('Error: CSV file not found:',path)
         return {}
+    except Exception as e:
+        print('Error from read_csv:',e)
+        print(e)
+        return {}
 
     header = lines[0].split(delimiter)
 

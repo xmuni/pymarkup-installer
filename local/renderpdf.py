@@ -2,6 +2,8 @@ import os
 import sys
 from xhtml2pdf import pisa
 
+THIS_FOLDER = os.path.basename(os.path.dirname(os.path.realpath(__file__)))
+
 def convertHtmlToPdf(sourceHtml, savepath):
     print('XHTML2PDF converting html')
     #print(savepath)
@@ -13,7 +15,7 @@ def convertHtmlToPdf(sourceHtml, savepath):
             #    print(type(getattr(pisaStatus,name)),'\t',name)
             return pisaStatus.err # return True on success and False on errors
     except FileNotFoundError as e:
-        print('Xhtml2pdf raise an error while creating pdf:')
+        print('Xhtml2pdf raised an error while creating pdf:')
         print(e)
 
 
@@ -24,11 +26,10 @@ def main():
 
     log += 'Filtered arguments: '+', '.join(args)+'\n'
     
-    default_folder = '/Users/pc/Dev/pymarkup_installer_redux/local/sys_folder/'
     
     try:
-        path_input = default_folder+'tmp.html'
-        path_output = default_folder+'tmp_out.pdf'
+        path_input  = os.path.join(THIS_FOLDER,'tmp.html')
+        path_output = os.path.join(THIS_FOLDER,'tmp_out.pdf')
         if len(args)==1:
             path_output = args[0]
         elif len(args) > 1:

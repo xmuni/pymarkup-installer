@@ -1,4 +1,0 @@
-All arguments: /Users/pc/Dev/pymarkup_installer_redux/local/sys_folder/renderpdf.py, --args, /Users/pc/Dev/pymarkup_installer_redux/local/asd.pdf
-Filtered arguments: /Users/pc/Dev/pymarkup_installer_redux/local/asd.pdf
-Conversion OK. Args: /Users/pc/Dev/pymarkup_installer_redux/local/asd.pdf
-Path output: /Users/pc/Dev/pymarkup_installer_redux/local/asd.pdf

@@ -6,17 +6,20 @@ from PySide2.QtWebEngineWidgets import QWebEngineView
 #from shiboken2 import *
 from subprocess import call, run, PIPE
 
+import sys
+import os
+import json
+
+
+DEBUG = 'debug' in sys.argv[1:]
+
+THIS_FOLDER = os.path.basename(os.path.dirname(os.path.realpath(__file__)))
+
 ADD_WEBENGINE = True
 
 #import tkinter
 
 from pymarkup_fns import read_toml, merge, read_csv, render_html, load_css, get_subitems, render_pdf
-'''
-from pymarkup_fns import \
-    read_csv, read_toml, merge, \
-    render_html, render_pdf, \
-    load_css, get_subitems, printdic, read_csv_adv, get_images
-'''
 from QCodeEditor import QCodeEditor
 
 import toml
@@ -35,12 +38,7 @@ print('Jinja2 OK')
 #print('Xhtml OK')
 
 #from PyQt5 import QtWebEngineWidgets
-print('PyQtWebEngine OK')
-
-import sys
-import os
-import json
-
+# print('PyQtWebEngine OK')
 
 
 
@@ -93,45 +91,41 @@ class SettingsDialog(QDialog):
         if chosen_path != '':
             self.widgets[key].setText(chosen_path)
             self.mw.settings['paths'][key] = chosen_path
-
-
-    def setup_widgets(self):
-        pass
-
+            
 
     def setup_layout(self):
 
         self.widgets = {
+            'sysfolder':        QLineEdit(),
+            'python':           QLineEdit(),
             'table_products':   QLineEdit(),
             'table_macros':     QLineEdit(),
             'img_folder':       QLineEdit(), # QPlainTextEdit()
             'template_html':    QLineEdit(),
             'template_css':     QLineEdit(),
-            'renderpdf':        QLineEdit(),
-            'sysfolder':        QLineEdit(),
-            'python':           QLineEdit(),
+            # 'renderpdf':        QLineEdit(),
         }
 
         widget_labels = {
+            'sysfolder':        "Cartella di sistema",
+            'python':           "Python3 full path",
             'table_products':   "Tabella prodotti",
             'table_macros':     "Tabella note",
             'img_folder':       "Cartella immagini",
             'template_html':    "HTML per anteprima",
             'template_css':     "CSS per anteprima",
-            'renderpdf':        "renderpdf.app",
-            'sysfolder':        "Cartella di sistema",
-            'python':           "Python3 full path",
+            # 'renderpdf':        "renderpdf.app",
         }
 
         widget_button_slots = {
+            'sysfolder':        lambda: self.FolderPicker('sysfolder'),
+            'python':           lambda: self.FilePicker('python','*'),
             'table_products':   lambda: self.FilePicker('table_products'),
             'table_macros':     lambda: self.FilePicker('table_macros'),
             'img_folder':       lambda: self.FolderPicker('img_folder'),
             'template_html':    lambda: self.FilePicker('template_html','*.html'),
             'template_css':     lambda: self.FilePicker('template_css','*.css'),
-            'renderpdf':        lambda: self.FilePicker('renderpdf','*.app'),
-            'sysfolder':        lambda: self.FolderPicker('sysfolder'),
-            'python':           lambda: self.FilePicker('python','*'),
+            # 'renderpdf':        lambda: self.FilePicker('renderpdf','*.app'),
         }
 
         #editable_fields = ['python']
@@ -155,6 +149,14 @@ class SettingsDialog(QDialog):
             grid_layout.addWidget(widget,i,1,1,1)
             grid_layout.addWidget(button,i,2,1,1)
 
+        self.widgets['python'].setReadOnly(False)
+        self.widgets['python'].setDisabled(False)
+        try:
+            self.widgets['python'].setText(self.mw.settings['paths']['python'])
+        except KeyError:
+            pass
+        self.widgets['python'].textChanged.connect(self.SetFields)
+
         grid_widget = QWidget()
         grid_widget.setLayout(grid_layout)
 
@@ -165,9 +167,9 @@ class SettingsDialog(QDialog):
 
         # settings_wh = self.mw.settings.get('settings_wh')
         # if settings_wh is not None:
+        '''
         geometry = self.mw.settings.get('geometry_wh')
         if geometry:
-
             x,y,w,h = geometry
             # w,h = settings_wh
             # Position dialog at the center of the main window
@@ -177,7 +179,21 @@ class SettingsDialog(QDialog):
 
             # self.setGeometry(x,y,w,h)
         else:
-            self.resize(500,500)
+        '''
+        self.resize(500,500)
+
+
+    def SetFields(self):
+        for key in ['python']:
+            self.mw.settings['paths'][key] = self.widgets[key].text()
+            print(key,'text saved')
+
+    '''
+    def closeEvent(self,event):
+        event.ignore()
+        self.SetFields()
+        event.accept()
+    '''
 
 
 
@@ -203,6 +219,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.init_mainmenu()
 
         self.python_path = None
+
+        self.save_html = True # Always true unless disabled in debug mode
         
         try:
             self.css = load_css(self.settings['paths']['css'])
@@ -211,7 +229,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.LoadResources()
 
-        print('Singles:',len(self.singles.keys()))
+        # print('Singles:',len(self.singles.keys()))
         # self.singles = {}
         
         # print('Macros:',len(self.macros.keys()))
@@ -282,8 +300,6 @@ class MainWindow(QtWidgets.QMainWindow):
                 ['Aggiorna anteprima', 'Ctrl+R', self.Refresh],
                 ['Aggiorna database', 'Ctrl+L',     self.LoadResources],
                 ['Impostazioni...', 'Ctrl+I',          self.OpenSettingsDialog],
-                # ['Print pwd', 'Ctrl+P',          self.PrintPwd],
-                ['Subprocess', None, self.RunSubprocess],
                 [],
                 ['Chiudi', 'Ctrl+Shift+Q',          self.close],
             ],
@@ -295,6 +311,16 @@ class MainWindow(QtWidgets.QMainWindow):
                 ['Riduci anteprima',None,self.ZoomOutBrowser],
             ]
         }
+
+        if DEBUG:
+            menus['Debug'] = [
+                # ['Print pwd', 'Ctrl+P',          self.PrintPwd],
+                ['Which Python', None, self.RunSubprocess],
+                ['Print this folder', None, self.PrintThisFolder],
+                ['Save html on', None, self.EnableSaveHTML],
+                ['Save html off', None, self.DisableSaveHTML],
+                ['Print settings', None, self.PrintSettings],
+            ]
 
         for menu_name,entries in menus.items():
             menu = menubar.addMenu(menu_name)
@@ -310,11 +336,23 @@ class MainWindow(QtWidgets.QMainWindow):
                 else:
                     menu.addSeparator()
 
+    def EnableSaveHTML(self):
+        self.save_html = True;
+
+    def DisableSaveHTML(self):
+        self.save_html = False;
+
+    def PrintSettings(self):
+        settings = json.dumps(self.settings,indent=4)
+        self.ConsoleLog(settings)
+        print(settings)
 
     def PrintPwd(self):
         path = os.path.abspath('./')
         self.ConsoleLog(path)
 
+    def PrintThisFolder(self):
+        self.ConsoleLog(THIS_FOLDER);
 
     def ZoomInEditor(self):
         self.texteditor.zoomIn()
@@ -494,10 +532,10 @@ class MainWindow(QtWidgets.QMainWindow):
         toml_text = self.texteditor.toPlainText()
         toml_model = read_toml(toml_text, css=self.css)
         order_model = merge(toml_model, self.singles, self.subitems, self.macros, self.images)
-        print('TOML merge OK')
+        # print('TOML merge OK')
         
         template_path = 'template.html'
-        print('Template path:',template_path)
+        # print('Template path:',template_path)
         path_html = self.settings['paths']['template_html']
         path_css  = self.settings['paths']['template_css']
         return render_html(order_model, path_html=path_html, path_css=path_css, **kwargs)
@@ -508,7 +546,7 @@ class MainWindow(QtWidgets.QMainWindow):
         folder,filename = os.path.split(self.settings['paths']['lastopened'])
         name,_ = os.path.splitext(filename)
         defaultpath = os.path.join(folder,name+'.pdf')
-        print('Last opened folder/filename:',folder)
+        # print('Last opened folder/filename:',folder)
 
         savepath,_ = QtWidgets.QFileDialog().getSaveFileName(self, "Salva PDF", defaultpath, "PDF (*.pdf)")
         if savepath == '':
@@ -517,13 +555,13 @@ class MainWindow(QtWidgets.QMainWindow):
         path_sys = self.settings['paths']['sysfolder']
         html = self.RenderHTML(**kwargs)
 
-        # Save 'tmp.html'
         htmlpath = os.path.join(path_sys,'tmp.html')
-        '''
-        # TEMPORARILY DISABLED FOR DEBUGGING
-        with open(htmlpath, 'w+', encoding='UTF-8') as file:
-            file.write(html)
-        '''
+
+        # Save 'tmp.html'
+        # MAY BE DISABLED FOR DEBUGGING
+        if self.save_html:
+            with open(htmlpath, 'w+', encoding='UTF-8') as file:
+                file.write(html)
 
         sys_folder = self.settings['paths']['sysfolder']
         #path_script = os.path.join(self.settings['paths']['renderpdf'], 'Contents/MacOS/renderpdf')
@@ -592,7 +630,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
 
     def DisplayHTML(self, html):
-        print('Display HTML')
+        # print('Display HTML')
         self.browser.SetHTML(html)
 
 
@@ -645,7 +683,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
 
     def SaveSettings(self):
-        print('Saving settings')
+        # print('Saving settings')
         
         g = self.geometry()
         self.settings['geometry'] = [g.x(), g.y() ,g.width(), g.height()]
@@ -664,11 +702,11 @@ class MainWindow(QtWidgets.QMainWindow):
 
 
     def closeEvent(self,event):
-        print('closeEvent')
+        # print('closeEvent')
         if self.ConfirmClose():
             event.ignore()
             self.SaveSettings()
-            print('Closing program (settings saved)')
+            # print('Closing program (settings saved)')
             event.accept()
         else:
             event.ignore()
@@ -685,12 +723,19 @@ class MainWindow(QtWidgets.QMainWindow):
     
 
 
-def main_pymarkup():
+def main():
+
+    if DEBUG:
+        print('-'*25)
+        print('[D] Running in debug mode')
+        print('-'*25)
+    
     app = QtWidgets.QApplication(sys.argv)
     window = MainWindow()
     # window.resize(700, 500)
     window.show()
     sys.exit(app.exec_())
 
+
 if __name__ == '__main__':
-    main_pymarkup()
+    main()

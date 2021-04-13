@@ -21,7 +21,7 @@ eur = 1
 um = 'pz'
 kg-pz = 1
 img = "default.jpg"
-desc = 'blabla'
+desc = 'Art. 100'
 
 [[tab.riga]]
 mq = 30
