@@ -96,7 +96,7 @@ def read_csv(path, delimiter=','):
         with open(path,'r+',encoding='UTF-16') as file:
             lines = file.read().splitlines()
     except FileNotFoundError:
-        print('Error: CSV file not found:',path)
+        print(f'Error: CSV file not found. Path: "{path}"')
         return {}
     except Exception as e:
         print('Error from read_csv:',e)
@@ -178,6 +178,9 @@ def add_br(text):
 
 
 def load_css(path):
+
+    if path is None:
+        return {}
     
     try:
         css_str = open(path,'r+',encoding='UTF-8').read()
@@ -186,6 +189,7 @@ def load_css(path):
     # If main.css is not found, fall back on the hardcoded css
     except FileNotFoundError:
         return html_css.css
+
 
 
 # Split actual toml and markdown

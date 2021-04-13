@@ -91,7 +91,7 @@ class SettingsDialog(QDialog):
         if chosen_path != '':
             self.widgets[key].setText(chosen_path)
             self.mw.settings['paths'][key] = chosen_path
-            
+
 
     def setup_layout(self):
 
@@ -101,19 +101,19 @@ class SettingsDialog(QDialog):
             'table_products':   QLineEdit(),
             'table_macros':     QLineEdit(),
             'img_folder':       QLineEdit(), # QPlainTextEdit()
-            'template_html':    QLineEdit(),
-            'template_css':     QLineEdit(),
+            # 'template_html':    QLineEdit(),
+            # 'template_css':     QLineEdit(),
             # 'renderpdf':        QLineEdit(),
         }
 
         widget_labels = {
             'sysfolder':        "Cartella di sistema",
-            'python':           "Python3 full path",
+            'python':           "Python",
             'table_products':   "Tabella prodotti",
             'table_macros':     "Tabella note",
             'img_folder':       "Cartella immagini",
-            'template_html':    "HTML per anteprima",
-            'template_css':     "CSS per anteprima",
+            # 'template_html':    "HTML per anteprima",
+            # 'template_css':     "CSS per anteprima",
             # 'renderpdf':        "renderpdf.app",
         }
 
@@ -123,8 +123,8 @@ class SettingsDialog(QDialog):
             'table_products':   lambda: self.FilePicker('table_products'),
             'table_macros':     lambda: self.FilePicker('table_macros'),
             'img_folder':       lambda: self.FolderPicker('img_folder'),
-            'template_html':    lambda: self.FilePicker('template_html','*.html'),
-            'template_css':     lambda: self.FilePicker('template_css','*.css'),
+            # 'template_html':    lambda: self.FilePicker('template_html','*.html'),
+            # 'template_css':     lambda: self.FilePicker('template_css','*.css'),
             # 'renderpdf':        lambda: self.FilePicker('renderpdf','*.app'),
         }
 
@@ -223,7 +223,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.save_html = True # Always true unless disabled in debug mode
         
         try:
-            self.css = load_css(self.settings['paths']['css'])
+            self.css = load_css(self.GetPath('css'))
         except KeyError:
             self.css = ''
 
@@ -244,6 +244,24 @@ class MainWindow(QtWidgets.QMainWindow):
         except KeyError: pass
 
         self.Refresh()
+
+
+    def GetPath(self,key):
+
+        default_names = {
+            'css': 'main.css',
+            'html': 'template.html',
+        }
+
+        try:
+            self.settings['paths']['css']
+        except KeyError:
+            try:
+                return os.path.join(self.settings['paths']['sys_folder'],default_names[key])
+            except KeyError:
+                pass
+
+        return None
 
 
     # Load two tables and images
@@ -297,10 +315,6 @@ class MainWindow(QtWidgets.QMainWindow):
                 ['Esporta PDF (preventivo)', 'Ctrl+E', self.RenderPDF_estimate],
                 ['Esporta PDF (proforma)', 'Ctrl+T', self.RenderPDF_proforma],
                 [],
-                ['Aggiorna anteprima', 'Ctrl+R', self.Refresh],
-                ['Aggiorna database', 'Ctrl+L',     self.LoadResources],
-                ['Impostazioni...', 'Ctrl+I',          self.OpenSettingsDialog],
-                [],
                 ['Chiudi', 'Ctrl+Shift+Q',          self.close],
             ],
             'Visualizza': [
@@ -309,17 +323,22 @@ class MainWindow(QtWidgets.QMainWindow):
                 [],
                 ['Ingrandisci anteprima',None,self.ZoomInBrowser],
                 ['Riduci anteprima',None,self.ZoomOutBrowser],
+            ],
+            'Strumenti': [
+                ['Aggiorna anteprima', 'Ctrl+R',    self.Refresh],
+                ['Aggiorna database', 'Ctrl+L',     self.LoadResources],
+                ['Impostazioni...', 'Ctrl+I',       self.OpenSettingsDialog],
             ]
         }
 
         if DEBUG:
             menus['Debug'] = [
                 # ['Print pwd', 'Ctrl+P',          self.PrintPwd],
-                ['Which Python', None, self.RunSubprocess],
-                ['Print this folder', None, self.PrintThisFolder],
-                ['Save html on', None, self.EnableSaveHTML],
-                ['Save html off', None, self.DisableSaveHTML],
-                ['Print settings', None, self.PrintSettings],
+                ['Which Python',        None,   self.RunSubprocess],
+                ['Print this folder',   None,   self.PrintThisFolder],
+                ['Save html on',        None,   self.EnableSaveHTML],
+                ['Save html off',       None,   self.DisableSaveHTML],
+                ['Print settings',      None,   self.PrintSettings],
             ]
 
         for menu_name,entries in menus.items():
